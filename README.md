@@ -4,6 +4,8 @@ A composable, embeddable price tracker for [Hive-Engine](https://hive-engine.com
 
 Resolves token prices by chaining together configurable steps — LP pool ratios, known pegs, and external price feeds — and stores snapshots over time so you can display a price chart on your token's site.
 
+**Live example:** [ecobankdevelopment.com/token-price](https://ecobankdevelopment.com/token-price) — the ECOBANK chart on that page runs the resolver from this repo, embedded into an existing app (see [Embedding into an existing app](#embedding-into-an-existing-app) below).
+
 ---
 
 ## How it works
@@ -31,6 +33,22 @@ MYTOKEN ──[LP: BEE:MYTOKEN]──► BEE ──[LP: SWAP.HIVE:BEE]──► 
 
 ---
 
+## Why "opinionated"?
+
+Look again at the ECOBANK chain above. That `constant: 0.5` step isn't fetched from anywhere — it's a soft peg somebody decided on: *1 HSBIDAO is worth 0.5 HIVE*. Nothing on-chain enforces that number. It could drift, be renegotiated, or simply be wrong. This tool doesn't hide that fact behind an API call that looks authoritative — it puts the assumption directly in your config, in plain sight, for anyone to read and question.
+
+That's the point. In a decentralized system there is usually no single "true" price. A token can trade at slightly different ratios across LP pools, an external API can lag or disagree with on-chain state, and a peg is, at bottom, a promise rather than a physical law. A price feed that just hands you one number is quietly making all of these calls for you — which pool, which source, which peg holds — without telling you it made them.
+
+This widget makes you make those calls explicitly, as a chain of named, inspectable steps. That's an opinion: about which pool is authoritative, which peg to trust, which external source to defer to for the HIVE/USD leg. Opinions aren't a flaw here — a "neutral" price feed is really just an opinion someone else formed and declined to show you. Writing the chain down means:
+
+- **Anyone can audit it.** Read `config.yaml` and you know exactly how a price was derived — no black box.
+- **Anyone can disagree with it.** If you think the peg should be `0.45` or the LP pair should be `BEE:ECOBANK` instead, that's a one-line diff, not a mystery to reverse-engineer.
+- **It fails loudly, not silently.** If a pool disappears or a peg assumption goes stale, the chain breaks visibly instead of quietly returning a number nobody vouches for.
+
+Publish your resolution chain the same way you'd publish your source code. Being explicit about the opinion is what makes the data trustworthy — not pretending there wasn't one.
+
+---
+
 ## Requirements
 
 - Python 3.11+
@@ -41,7 +59,7 @@ MYTOKEN ──[LP: BEE:MYTOKEN]──► BEE ──[LP: SWAP.HIVE:BEE]──► 
 ## Installation
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/AlexTrapp/token-price-widget.git
 cd token-price-widget
 uv sync
 ```
@@ -333,6 +351,9 @@ No code changes required.
 
 ```
 token-price-widget/
+  README.md
+  LICENSE                      # MIT
+  CONTRIBUTING.md
   config.example.yaml          # copy to config.yaml
   pyproject.toml
   token_price_widget/
@@ -345,3 +366,9 @@ token-price-widget/
       sqlite.py                # SQLite backend
       json_file.py             # flat JSON backend
 ```
+
+---
+
+## License
+
+[MIT](LICENSE). Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
