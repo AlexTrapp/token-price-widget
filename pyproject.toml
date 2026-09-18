@@ -10,10 +10,6 @@ dependencies = [
     "apscheduler>=3.10",
 ]
 
-[project.optional-dependencies]
-postgres = ["psycopg2-binary>=2.9"]
-mongo = ["pymongo>=4.6"]
-
 [project.scripts]
 token-price-widget = "token_price_widget.server:main"
 token-price-tracker = "token_price_widget.tracker:main"

@@ -8,7 +8,9 @@ Endpoints:
   GET /tokens                           list configured tokens
 """
 
+import functools
 import os
+import time
 from datetime import datetime, timezone
 
 from flask import Flask, abort, jsonify, render_template_string, request
@@ -19,6 +21,31 @@ from .storage import get_storage
 app = Flask(__name__)
 _cfg = None
 _storage = None
+
+_response_cache = {}
+CACHE_TTL_SECONDS = 30
+
+
+def cached_response(view):
+    """
+    Cache a view's response per full request path (including query string)
+    for CACHE_TTL_SECONDS. Keeps repeated polling (e.g. an embedded chart's
+    auto-refresh, or a burst of crawler/client requests) from re-hitting the
+    database and upstream price sources on every call.
+    """
+
+    @functools.wraps(view)
+    def wrapper(*args, **kwargs):
+        key = request.full_path
+        now = time.time()
+        cached = _response_cache.get(key)
+        if cached and now - cached[0] < CACHE_TTL_SECONDS:
+            return cached[1]
+        result = view(*args, **kwargs)
+        _response_cache[key] = (now, result)
+        return result
+
+    return wrapper
 
 
 def _get_cfg():
@@ -42,6 +69,7 @@ def list_tokens():
 
 
 @app.route("/price/<token>")
+@cached_response
 def latest_price(token):
     cfg = _get_cfg()
     token = token.upper()
@@ -59,6 +87,7 @@ def latest_price(token):
 
 
 @app.route("/history/<token>")
+@cached_response
 def price_history(token):
     cfg = _get_cfg()
     token = token.upper()
@@ -81,7 +110,7 @@ _CHART_TEMPLATE = """<!DOCTYPE html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ token }} Price</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js" integrity="sha384-XcdcwHqIPULERb2yDEM4R0XaQKU3YnDsrTmjACBZyfdVVqjh6xQ4/DCMd7XLcA6Y" crossorigin="anonymous"></script>
   <style>
     body { margin: 0; background: transparent; font-family: sans-serif; }
     .container { padding: 8px; }
@@ -140,6 +169,7 @@ _CHART_TEMPLATE = """<!DOCTYPE html>
 
 
 @app.route("/chart/<token>")
+@cached_response
 def chart(token):
     cfg = _get_cfg()
     token = token.upper()

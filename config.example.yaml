@@ -12,9 +12,9 @@ retention_days: 90
 
 # Storage backend
 # sqlite:///prices.db  (default, no extra deps)
-# postgresql://user:pass@host/dbname
-# mongodb://localhost:27017/mydb
 # json:///path/to/prices.json
+# Need something else (Postgres, Mongo, ...)? Implement BaseStorage and
+# register the URL scheme in token_price_widget/storage/__init__.py.
 database_url: "sqlite:///prices.db"
 
 # Which currencies to resolve to (one or both)
